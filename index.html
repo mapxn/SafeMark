@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>安全水印</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        #container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 24px;
+            text-align: center;
+            color: #2563eb;
+        }
+
+        article {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 1px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            justify-content: space-between;
+        }
+
+        .control-group>div {
+            flex: 1 1 45%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            min-width: 80px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .control-group input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .control-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .control-group input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #2563eb;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #graph {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 20px 0;
+        }
+
+        .image-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f8fafc;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .image-container:hover {
+            transform: translateY(-2px);
+        }
+
+        .image-container canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: zoom-in;
+        }
+
+        .image-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .image-container:hover .image-actions {
+            opacity: 1;
+        }
+
+        .image-actions button {
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .image-actions button:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .preview-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: zoom-out;
+        }
+
+        .preview-overlay.active {
+            display: flex;
+        }
+
+        .preview-overlay canvas {
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        @media (max-width: 640px) {
+            #container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            label {
+                min-width: 80px;
+                color: #1e293b;
+                font-weight: 500;
+            }
+        }
+
+        /* 骨架屏样式 */
+        .skeleton {
+            background-color: #e2e8f0;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            background: #f8fafc;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            aspect-ratio: 1 / 1;
+            min-height: 150px;
+        }
+
+        .skeleton::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -150px;
+            height: 100%;
+            width: 150px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: loading 1.5s infinite;
+        }
+
+        /* 加号样式 */
+        .upload-skeleton::before {
+            content: '+';
+            font-size: 3em;
+            color: #2563eb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes loading {
+            0% {
+                left: -150px;
+            }
+
+            50% {
+                left: 100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        .image-container canvas,
+        .skeleton {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: zoom-in;
+        }
+
+        .image-container {
+            margin-bottom: 20px;
+        }
+
+
+        .drag-over {
+            border: 2px dashed #2563eb;
+            background: #f0f7ff;
+        }
+
+        .input-group {
+            display: none;
+        }
+
+        /* 美化图片选择器和取色器 */
+        .input-group input[type="file"],
+        .input-group input[type="text"],
+        .input-group input[type="color"] {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input[type="file"]:focus,
+        .input-group input[type="text"]:focus,
+        .input-group input[type="color"]:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <h1>安全水印</h1>
+        <article>
+            安全地为你的隐私图片添加水印，完全离线。
+        </article>
+
+        <div class="control-group">
+            <div>
+                <label for="text">文本</label>
+                <input type="text" id="text" placeholder="输入水印文本">
+            </div>
+            <div>
+                <label for="color">颜色</label>
+                <input type="color" id="color" value="#000000">
+            </div>
+            <div>
+                <label for="alpha">透明度</label>
+                <input type="range" id="alpha" min="0" max="1" step="0.05" value="0.3">
+            </div>
+            <div>
+                <label for="space">间隔</label>
+                <input type="range" id="space" min="1" max="8" step="0.2" value="1.5">
+            </div>
+            <div>
+                <label for="size">字号</label>
+                <input type="range" id="size" min="0.5" max="3" step="0.05" value="0.8">
+            </div>
+            <div>
+                <label for="angle">倾斜角度</label>
+                <input type="range" id="angle" min="0" max="360" step="1" value="45">
+            </div>
+        </div>
+
+        <div id="graph">
+            <div class="skeleton upload-skeleton"></div>
+        </div>
+        <button onclick="downloadAllPic()">下载全部图片</button>
+
+    </div>
+
+    <script>
+        // 工具函数
+        const $ = sel => document.querySelector(sel);
+        const inputItems = ['text', 'color', 'alpha', 'space', 'size', 'angle'];
+        const configInputSetting = {};
+        let allCanvas = [];
+
+        // DOM 元素
+        const graph = $('#graph');
+        const container = $('#container');
+
+        // 创建预览遮罩
+        const previewOverlay = document.createElement('div');
+        previewOverlay.className = 'preview-overlay';
+        document.body.appendChild(previewOverlay);
+
+        // 工具函数
+        const dataURItoBlob = dataURI => {
+            const binary = atob(dataURI.split(',')[1]);
+            const array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                array[i] = binary.charCodeAt(i);
+            }
+            return new Blob([array], { type: 'image/png' });
+        };
+
+        const generateFileName = fileName => {
+            const pad = n => n < 10 ? `0${n}` : n;
+            const d = new Date();
+            const timeStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+            return `${fileName}_${timeStr}.png`;
+        };
+
+        // Canvas 相关函数
+        const redrawCanvas = (canvas, img) => {
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+        };
+
+        const makeStyle = () => {
+            if (!configInputSetting.color || !configInputSetting.alpha) return 'rgba(0,0,0,0.3)';
+            const match = configInputSetting.color.value.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+            if (!match) return 'rgba(0,0,0,0.3)';
+            return `rgba(${parseInt(match[1], 16)},${parseInt(match[2], 16)},${parseInt(match[3], 16)},${configInputSetting.alpha.value})`;
+        };
+
+        // 绘制文字函数
+        const drawText = (canvas, img) => {
+            redrawCanvas(canvas, img);
+            const ctx = canvas.getContext('2d');
+            const text = configInputSetting.text.value;
+
+            if (!text) return;
+
+            const textSize = configInputSetting.size.value * Math.max(15, Math.min(canvas.width, canvas.height) / 25);
+            ctx.font = `${textSize}px -apple-system, sans-serif`;
+
+            const metrics = ctx.measureText(text);
+            const textWidth = metrics.width;
+            const textHeight = textSize;
+
+            // 设置间距
+            const xGap = textWidth * configInputSetting.space.value;
+            const yGap = textHeight * configInputSetting.space.value;
+
+            // 获取倾斜角度
+            const angle = configInputSetting.angle.value * Math.PI / 180;
+
+            ctx.fillStyle = makeStyle();
+
+            // 计算需要绘制的行数和列数
+            const cols = Math.ceil(canvas.width / xGap) + 4;
+            const rows = Math.ceil(canvas.height / yGap) + 4;
+
+            // 以图片中心为原点进行旋转
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(angle);
+            ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+            // 逐个绘制文字
+            for (let i = -cols; i <= cols; i++) {
+                for (let j = -rows; j <= rows; j++) {
+                    const x = i * xGap;
+                    const y = j * yGap;
+
+                    // 将每个字的中心点作为旋转中心
+                    const centerX = x + textWidth / 2;
+                    const centerY = y + textHeight / 2;
+
+                    ctx.fillText(text, centerX - textWidth / 2, centerY);
+                }
+            }
+
+            ctx.restore();
+        };
+
+        // 添加拖放支持
+        container.addEventListener('dragover', e => {
+            e.preventDefault();
+            container.classList.add('drag-over');
+        });
+
+        container.addEventListener('dragleave', () => {
+            container.classList.remove('drag-over');
+        });
+
+        container.addEventListener('drop', e => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+
+            [...e.dataTransfer.files]
+                .filter(file => file.type.startsWith('image/'))
+                .forEach(readFile);
+        });
+
+        // 添加粘贴支持
+        document.addEventListener('paste', e => {
+            const items = e.clipboardData.items;
+            [...items]
+                .filter(item => item.type.startsWith('image/'))
+                .forEach(item => readFile(item.getAsFile()));
+        });
+
+        const createImageContainer = (canvas, fileName) => {
+            const container = document.createElement('div');
+            container.className = 'image-container';
+
+            const skeleton = document.createElement('div');
+            skeleton.className = 'skeleton';
+            container.appendChild(skeleton);
+
+            const actions = document.createElement('div');
+            actions.className = 'image-actions';
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = '下载';
+            downloadBtn.onclick = e => {
+                e.stopPropagation();
+                downloadCanvasAsImage(canvas, fileName);
+            };
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '删除';
+            deleteBtn.onclick = e => {
+                e.stopPropagation();
+                container.remove();
+                allCanvas = allCanvas.filter(item => item.canvas !== canvas);
+            };
+
+            actions.appendChild(deleteBtn);
+            actions.appendChild(downloadBtn);
+            container.appendChild(actions);
+
+            // 添加点击预览
+            canvas.style.display = 'none';
+            // 使用图片加载事件
+            // Canvas 没有 onload 事件，使用 img 加载后显示
+            const img = new Image();
+            img.onload = () => {
+                skeleton.style.display = 'none';
+                canvas.style.display = 'block';
+            };
+            img.src = canvas.toDataURL();
+
+            canvas.onclick = () => {
+                previewOverlay.innerHTML = '';
+                const previewCanvas = document.createElement('canvas');
+                previewCanvas.width = canvas.width;
+                previewCanvas.height = canvas.height;
+                const ctx = previewCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, 0);
+                previewOverlay.appendChild(previewCanvas);
+                previewOverlay.classList.add('active');
+            };
+
+            container.appendChild(canvas);
+
+            return container;
+        };
+
+        const readFile = file => {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    allCanvas.push({ img, canvas, fileName: file.name });
+                    drawText(canvas, img);
+
+                    const container = createImageContainer(canvas, file.name);
+                    // 插入到最后一个骨架之前
+                    const skeleton = graph.querySelector('.upload-skeleton');
+                    graph.insertBefore(container, skeleton);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // 关闭预览
+        previewOverlay.onclick = () => {
+            previewOverlay.classList.remove('active');
+        };
+
+        // 下载所有图片
+        const downloadAllPic = () => {
+            allCanvas.forEach(({ canvas, fileName }) => {
+                downloadCanvasAsImage(canvas, fileName);
+            });
+        };
+
+        const downloadCanvasAsImage = (canvas, fileName) => {
+            const link = document.createElement('a');
+            link.download = generateFileName(fileName);
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+
+        // 初始化输入项
+        inputItems.forEach(item => {
+            const el = $('#' + item);
+            if (el) {
+                configInputSetting[item] = el;
+                el.addEventListener('input', () => {
+                    allCanvas.forEach(({ canvas, img }) => {
+                        drawText(canvas, img);
+                    });
+                });
+            }
+        });
+
+        // 处理上传骨架点击
+        const handleUploadSkeletonClick = () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.multiple = true; // 允许多选
+            fileInput.onchange = () => {
+                [...fileInput.files].forEach(readFile);
+            };
+            fileInput.click();
+        };
+
+        const initialSkeleton = graph.querySelector('.upload-skeleton');
+        initialSkeleton.addEventListener('click', handleUploadSkeletonClick);
+
+        // 自动添加新的上传骨架
+        const addUploadSkeleton = () => {
+            const newSkeleton = document.createElement('div');
+            newSkeleton.className = 'skeleton upload-skeleton';
+            newSkeleton.addEventListener('click', handleUploadSkeletonClick);
+            graph.appendChild(newSkeleton);
+        };
+
+        // 修改 readFile 函数以添加新的上传骨架
+        const originalReadFile = readFile;
+        readFile = file => {
+            originalReadFile(file);
+            // 延时添加新骨架，确保当前上传骨架不会被点击
+            setTimeout(() => {
+                addUploadSkeleton();
+            }, 500);
+        };
+    </script>
+</body>
+
+</html>
