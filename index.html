@@ -367,6 +367,38 @@
             outline: none;
             border-color: #2563eb;
         }
+
+
+    .button-container {
+    display: flex;
+    flex-direction: column; /* 使描述和按钮垂直排列 */
+    align-items: center; /* 水平居中对齐 */
+    margin-top: 20px;
+  }
+
+  .description {
+    margin-bottom: 10px; /* 描述与按钮之间的间距 */
+    font-size: 14px; /* 描述文字大小 */
+    color: #555; /* 描述文字颜色 */
+    text-align: center; /* 描述文字居中对齐 */
+    max-width: 300px; /* 描述文字的最大宽度 */
+  }
+
+  .save-button {
+    width: 150px;
+    padding: 10px 20px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .save-button:hover {
+    background-color: #f0f0f0;
+  }
+  }
     </style>
 </head>
 
@@ -439,6 +471,36 @@
         <div class="preview-overlay" onclick="togglePreview()"></div>
 
     </div>
+
+    <!-- 将按钮放在一个容器中 -->
+  <div class="button-container">
+      <p class="description">
+        本工具不联网，没有任何外部库，可以直接保存到本地断网使用，确保您的数据安全。
+      </p>
+    
+    <button id="savePageButton" class="save-button">保存本页</button>
+  </div>
+
+    <script>
+        document.getElementById('savePageButton').addEventListener('click', function() {
+          // 获取整个 HTML 文档的内容
+          const htmlContent = document.documentElement.outerHTML;
+      
+          // 创建一个 Blob 对象
+          const blob = new Blob([htmlContent], { type: 'text/html' });
+      
+          // 创建一个下载链接
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = '照片添加水印.html';
+      
+          // 触发下载
+          link.click();
+      
+          // 释放 URL 对象
+          URL.revokeObjectURL(link.href);
+        });
+      </script>
 
     <script>
         let currentLang = 'zh';
@@ -869,6 +931,7 @@
             addUploadSkeleton;
         };
     </script>
+
 </body>
 
 </html>
